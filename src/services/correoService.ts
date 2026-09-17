@@ -59,6 +59,8 @@ export async function enviarConfirmacionRadicacion(
         apellidos: solicitud.apellidos,
         radicado: solicitud.radicado,
         programa: solicitud.programa,
+        nivel: solicitud.nivel,
+        viaRadicacion: solicitud.viaRadicacion,
         ...(autorizacionPdfBase64
           ? {
               adjunto: {

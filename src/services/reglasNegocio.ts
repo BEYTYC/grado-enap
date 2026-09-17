@@ -235,32 +235,29 @@ export function solicitudesAbiertas(
 }
 
 /**
- * Vigencia de la vía "Ceremonia" (nueva, junto con "Ventanilla" — ver
- * ViaRadicacion en types.ts). Solo está disponible cuando hay una fecha
- * tentativa de ceremonia definida Y la ventana de radicación general sigue
- * abierta; si cualquiera de las dos condiciones falta, se deshabilita con el
- * motivo correspondiente para mostrar el aviso exacto en pantalla.
+ * Vigencia de la vía "Ceremonia" (junto con "Ventanilla" — ver
+ * ViaRadicacion en types.ts).
  *
- * NOTA: la regla exacta de "plazos" para la ceremonia (por ejemplo, cerrar
- * la vía Ceremonia unos días antes de la fecha tentativa) no ha sido
- * confirmada por la institución — por ahora reutiliza la misma ventana de
- * apertura/cierre que ya define Secretaría Académica. Si el plazo debe ser
- * distinto (p. ej. "hasta 15 días antes de la ceremonia"), hay que decirlo
- * explícitamente para no inventar esa regla aquí.
+ * Regla EXACTA pedida por la institución, sin fecha de inicio y sin
+ * depender de ningún campo "Estado" que alguien deba recordar cambiar:
+ * la ceremonia (creada por Secretaría Académica en el Portal, con sus 3
+ * fechas — ver api/ceremonia.js) está disponible para el estudiante si y
+ * solo si HOY <= Fecha límite de solicitud del estudiante. En cuanto esa
+ * fecha pasa, se bloquea automáticamente (aparece en gris), sin que nadie
+ * tenga que apagarla a mano. No depende de la ventana general de
+ * apertura/cierre de Secretaría (`solicitudesAbiertas`) — esa sigue
+ * existiendo solo para la vía "Ventanilla".
  */
 export function vigenciaCeremonia(
-  config: Pick<
-    import('../types').ConfiguracionTitulacion,
-    'fechaTentativaGrado' | 'fechaAperturaSolicitudes' | 'fechaCierreSolicitudes'
-  >,
+  ceremonia: { fechaLimiteSolicitudEstudiante: string | null } | null,
   hoy: Date = new Date(),
-): { vigente: boolean; motivo: 'sin-fecha-tentativa' | 'antes-de-apertura' | 'despues-de-cierre' | null } {
-  if (!config.fechaTentativaGrado) {
-    return { vigente: false, motivo: 'sin-fecha-tentativa' };
+): { vigente: boolean; motivo: 'sin-ceremonia-vigente' | 'despues-de-cierre' | null } {
+  if (!ceremonia || !ceremonia.fechaLimiteSolicitudEstudiante) {
+    return { vigente: false, motivo: 'sin-ceremonia-vigente' };
   }
-  const ventana = solicitudesAbiertas(config.fechaAperturaSolicitudes, config.fechaCierreSolicitudes, hoy);
-  if (!ventana.abiertas) {
-    return { vigente: false, motivo: ventana.motivo };
+  const hoyIso = hoy.toISOString().slice(0, 10);
+  if (hoyIso > ceremonia.fechaLimiteSolicitudEstudiante) {
+    return { vigente: false, motivo: 'despues-de-cierre' };
   }
   return { vigente: true, motivo: null };
 }

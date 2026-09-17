@@ -17,7 +17,10 @@
 export interface CeremoniaActiva {
   nombre: string;
   fechaCeremonia: string | null;
-  fechaLimiteDocumentos: string | null;
+  /** Decide si la vía "Ceremonia" está activa: hoy <= esta fecha. */
+  fechaLimiteSolicitudEstudiante: string | null;
+  /** Informativa aquí (cargue de documentos + aval del decano); la usan las pantallas de facultad. */
+  fechaLimiteValidacionFacultades: string | null;
 }
 
 export async function obtenerCeremoniaActiva(): Promise<CeremoniaActiva | null> {
@@ -36,7 +39,8 @@ export async function obtenerCeremoniaActiva(): Promise<CeremoniaActiva | null> 
     return {
       nombre: data.nombre ?? '',
       fechaCeremonia: data.fechaCeremonia ?? null,
-      fechaLimiteDocumentos: data.fechaLimiteDocumentos ?? null,
+      fechaLimiteSolicitudEstudiante: data.fechaLimiteSolicitudEstudiante ?? null,
+      fechaLimiteValidacionFacultades: data.fechaLimiteValidacionFacultades ?? null,
     };
   } catch (error) {
     console.warn('[Titulación] Error consultando la ceremonia activa:', error);

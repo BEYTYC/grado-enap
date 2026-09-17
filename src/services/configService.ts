@@ -19,8 +19,18 @@ import type { ConfiguracionTitulacion } from '../types';
 
 const STORAGE_KEY = 'titulacion.config.v1';
 
-/** Correo de Secretaría Académica de fábrica — A.4 (un único correo con este rol). */
-const SECRETARIA_DE_FABRICA = 'secretariaacademica';
+/**
+ * Correo de Secretaría Académica de fábrica — A.4 (un único correo con este
+ * rol). Debe coincidir con el correo institucional real de Secretaría
+ * (sac@enap.edu.co, sin el dominio porque así se comparan estos correos —
+ * ver normalizarCorreoConfig): antes decía "secretariaacademica", que no es
+ * el correo real de nadie, así que iniciar sesión como sac@enap.edu.co
+ * siempre se rechazaba como "no autorizado" — no era una sesión atascada ni
+ * caché del navegador, era este valor incorrecto.
+ */
+const SECRETARIA_DE_FABRICA = 'sac';
+/** Valor de fábrica antiguo, incorrecto — ver migración en `cargarConfig`. */
+const SECRETARIA_DE_FABRICA_ANTIGUA_INCORRECTA = 'secretariaacademica';
 
 /**
  * Jefe de Estadística (planta): única administradora permanente del portal,
@@ -97,6 +107,16 @@ export function cargarConfig(): ConfiguracionTitulacion {
     if (parsed.fechaCierreSolicitudes === undefined) parsed.fechaCierreSolicitudes = null;
     if (parsed.fechaTentativaGrado === undefined) parsed.fechaTentativaGrado = null;
     if (parsed.apiBaseUrl === undefined) parsed.apiBaseUrl = null;
+    // Migración: navegadores que ya habían guardado el valor de fábrica
+    // ANTIGUO e incorrecto de Secretaría Académica ("secretariaacademica",
+    // que no es el correo real de nadie) se corrigen solos al de verdad
+    // (sac@enap.edu.co) — sin esto, cada equipo donde ya se había cargado
+    // esta app antes seguiría rechazando a sac@enap.edu.co aunque el código
+    // ya esté arreglado, porque el valor viejo quedó guardado en su
+    // localStorage.
+    if (normalizarCorreoConfig(parsed.correoSecretaria) === SECRETARIA_DE_FABRICA_ANTIGUA_INCORRECTA) {
+      parsed.correoSecretaria = SECRETARIA_DE_FABRICA;
+    }
     return parsed;
   } catch {
     return configDeFabrica();

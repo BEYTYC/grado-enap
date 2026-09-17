@@ -15,10 +15,18 @@
  * aquí. Este endpoint cierra esa brecha leyendo la lista real.
  *
  * Mismo sitio y mismo esquema de columnas que usa el Portal (ver su
- * `guardarCeremonia()`): Title/Nombre, FechaCeremonia, FechaLimite
- * Documentos, Estado ("Borrador" | "Activa" | "Cerrada"), Observaciones —
- * resueltas dinámicamente por nombre visible, nunca hardcodeadas, por si
- * el nombre interno real difiere.
+ * `guardarCeremonia()`): Title/Nombre, FechaCeremonia,
+ * FechaLimiteSolicitudEstudiante, FechaLimiteDocumentos (= fecha límite de
+ * VALIDACIÓN DE FACULTADES: cargue de documentos + aval del decano —
+ * nombre interno de columna sin cambiar, solo cambió la etiqueta visible),
+ * Estado, Observaciones — resueltas dinámicamente por nombre visible,
+ * nunca hardcodeadas, por si el nombre interno real difiere.
+ *
+ * REGLA DE VIGENCIA (pedida explícitamente, sin fecha de inicio ni
+ * dependencia de "Estado"): la ceremonia está ACTIVA para el estudiante
+ * si y solo si HOY <= FechaLimiteSolicitudEstudiante. En cuanto esa fecha
+ * pasa, se bloquea automáticamente — el campo "Estado" del Portal es
+ * puramente informativo para la Secretaría, ya no decide esto.
  *
  * Variables de entorno: las mismas GRAPH_TENANT_ID / GRAPH_CLIENT_ID /
  * GRAPH_CLIENT_SECRET que ya usan api/notificar.js y api/solicitudes.js.
@@ -42,18 +50,21 @@ const LISTA_CEREMONIAS = 'ENAP_Ceremonias';
 const CANDIDATOS_COLUMNAS = {
   nombre: ['Title', 'Nombre', 'Nombre de la ceremonia'],
   fechaCeremonia: ['FechaCeremonia', 'Fecha de la ceremonia', 'Fecha_ceremonia'],
-  fechaLimiteDocumentos: ['FechaLimiteDocumentos', 'Fecha limite de documentos', 'Fecha limite', 'FechaLimite'],
+  fechaLimiteSolicitudEstudiante: [
+    'FechaLimiteSolicitudEstudiante',
+    'Fecha limite de solicitud del estudiante',
+    'Fecha limite solicitud estudiante',
+  ],
+  fechaLimiteValidacionFacultades: [
+    'FechaLimiteDocumentos',
+    'Fecha limite de validacion de facultades',
+    'Fecha limite de documentos',
+    'Fecha limite',
+    'FechaLimite',
+  ],
   estado: ['Estado'],
   observaciones: ['Observaciones'],
 };
-
-function normalizarEstado(valor) {
-  return String(valor ?? '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim();
-}
 
 /** yyyy-mm-dd a partir de lo que SharePoint entregue (fecha completa ISO u otro formato de fecha). */
 function soloFecha(valor) {
@@ -76,7 +87,12 @@ async function leerCeremonias() {
       id: item.id,
       nombre: col.nombre ? f[col.nombre] ?? '' : '',
       fechaCeremonia: col.fechaCeremonia ? soloFecha(f[col.fechaCeremonia]) : null,
-      fechaLimiteDocumentos: col.fechaLimiteDocumentos ? soloFecha(f[col.fechaLimiteDocumentos]) : null,
+      fechaLimiteSolicitudEstudiante: col.fechaLimiteSolicitudEstudiante
+        ? soloFecha(f[col.fechaLimiteSolicitudEstudiante])
+        : null,
+      fechaLimiteValidacionFacultades: col.fechaLimiteValidacionFacultades
+        ? soloFecha(f[col.fechaLimiteValidacionFacultades])
+        : null,
       estado: col.estado ? f[col.estado] ?? '' : '',
       observaciones: col.observaciones ? f[col.observaciones] ?? '' : '',
     };
@@ -84,30 +100,26 @@ async function leerCeremonias() {
 }
 
 /**
- * De todas las ceremonias marcadas "Activa", elige la más relevante para
- * el estudiante: la de fecha más próxima que todavía no haya pasado: si
- * ninguna Activa tiene fecha futura, se toma la Activa más reciente (mejor
- * mostrar algo que el admin marcó explícitamente como vigente, que nada).
+ * Regla pedida explícitamente: NADA de "Estado" ni de fecha de inicio.
+ * Una ceremonia está vigente para el estudiante si hoy <=
+ * FechaLimiteSolicitudEstudiante. Entre todas las que cumplan esto, se
+ * muestra la de fecha de solicitud más próxima a vencer (la más urgente).
+ * Una ceremonia sin esa fecha definida nunca puede quedar "activa" — no hay
+ * forma de saber si ya venció.
  */
-function elegirCeremoniaActiva(ceremonias) {
-  const activas = ceremonias.filter((c) => normalizarEstado(c.estado) === 'activa');
-  if (!activas.length) return null;
-
+function elegirCeremoniaVigente(ceremonias) {
   const hoyIso = new Date().toISOString().slice(0, 10);
-  const futuras = activas
-    .filter((c) => c.fechaCeremonia && c.fechaCeremonia >= hoyIso)
-    .sort((a, b) => a.fechaCeremonia.localeCompare(b.fechaCeremonia));
-  if (futuras.length) return futuras[0];
-
-  const conFecha = activas.filter((c) => c.fechaCeremonia).sort((a, b) => b.fechaCeremonia.localeCompare(a.fechaCeremonia));
-  return conFecha[0] || activas[0];
+  const vigentes = ceremonias
+    .filter((c) => c.fechaLimiteSolicitudEstudiante && c.fechaLimiteSolicitudEstudiante >= hoyIso)
+    .sort((a, b) => a.fechaLimiteSolicitudEstudiante.localeCompare(b.fechaLimiteSolicitudEstudiante));
+  return vigentes[0] || null;
 }
 
 export default async function handler(req, res) {
   await manejarPeticion(req, res, {
     async vigente() {
       const ceremonias = await leerCeremonias();
-      const elegida = elegirCeremoniaActiva(ceremonias);
+      const elegida = elegirCeremoniaVigente(ceremonias);
       if (!elegida) {
         return { activa: false };
       }
@@ -115,7 +127,8 @@ export default async function handler(req, res) {
         activa: true,
         nombre: elegida.nombre,
         fechaCeremonia: elegida.fechaCeremonia,
-        fechaLimiteDocumentos: elegida.fechaLimiteDocumentos,
+        fechaLimiteSolicitudEstudiante: elegida.fechaLimiteSolicitudEstudiante,
+        fechaLimiteValidacionFacultades: elegida.fechaLimiteValidacionFacultades,
       };
     },
   });

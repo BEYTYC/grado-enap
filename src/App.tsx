@@ -172,28 +172,25 @@ export default function App() {
     return `El plazo para radicar solicitudes de titulación cerró el ${formatearFechaLarga(config.fechaCierreSolicitudes!)}.`;
   });
 
-  // Vigencia de la vía "Ceremonia" (requerimiento 3.1 del Portal): solo
-  // habilitada cuando HAY UNA CEREMONIA REAL marcada "Activa" en el Portal
-  // (lista de SharePoint ENAP_Ceremonias — ver ceremoniaService.ts) Y la
-  // ventana general de radicación sigue abierta — ver vigenciaCeremonia()
-  // en reglasNegocio.ts. Se consulta al abrir la página; mientras responde,
-  // se asume "no vigente" (igual que si no hubiera ceremonia) en vez de
-  // dejar el botón en un estado intermedio.
+  // Vigencia de la vía "Ceremonia" (requerimiento 3.1 del Portal): activa
+  // única y exclusivamente si HOY <= "Fecha límite de solicitud del
+  // estudiante" de la ceremonia real registrada en el Portal (lista de
+  // SharePoint ENAP_Ceremonias — ver ceremoniaService.ts / api/ceremonia.js).
+  // Sin fecha de inicio, sin depender de ningún campo "Estado" ni de la
+  // ventana general de Secretaría — ver vigenciaCeremonia() en
+  // reglasNegocio.ts. Se consulta al abrir la página; mientras responde, se
+  // asume "no vigente" (igual que si no hubiera ceremonia) en vez de dejar
+  // el botón en un estado intermedio.
   const [ceremonia, setCeremonia] = useState<ReturnType<typeof vigenciaCeremonia>>({
     vigente: false,
-    motivo: 'sin-fecha-tentativa',
+    motivo: 'sin-ceremonia-vigente',
   });
   useEffect(() => {
     if (embedded) return;
     let cancelado = false;
     obtenerCeremoniaActiva().then((activa) => {
       if (cancelado) return;
-      setCeremonia(
-        vigenciaCeremonia({
-          ...cargarConfig(),
-          fechaTentativaGrado: activa?.fechaCeremonia ?? null,
-        }),
-      );
+      setCeremonia(vigenciaCeremonia(activa));
     });
     return () => {
       cancelado = true;

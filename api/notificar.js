@@ -110,6 +110,53 @@ async function enviarCorreo({ to, subject, html, adjunto }) {
   }
 }
 
+/**
+ * Correo a Secretaría Académica (sac@enap.edu.co) por cada solicitud
+ * radicada — sin importar desde qué computador, red o ciudad la haya
+ * radicado el estudiante, porque esto corre en el servidor, no en el
+ * navegador del estudiante. La dirección es configurable
+ * (GRAPH_SAC_NOTIFICACION_EMAIL) por si algún día cambia, pero por
+ * defecto es la real: sac@enap.edu.co.
+ *
+ * Un fallo aquí NUNCA debe tumbar la radicación ni el correo de
+ * confirmación al estudiante (que ya se envió antes de esto) — se registra
+ * en los logs de la función y ya.
+ */
+async function notificarSecretaria(payload, correoEstudiante) {
+  const destino = (process.env.GRAPH_SAC_NOTIFICACION_EMAIL || 'sac@enap.edu.co').trim();
+  const radicado = escapeHtml(payload.radicado);
+  const nombres = escapeHtml(payload.nombres);
+  const apellidos = escapeHtml(payload.apellidos);
+  const programa = escapeHtml(payload.programa);
+  const nivel = escapeHtml(payload.nivel);
+  const viaRadicacion = escapeHtml(payload.viaRadicacion);
+  const adjunto = payload.adjunto && payload.adjunto.contentBytesBase64 ? payload.adjunto : null;
+
+  try {
+    await enviarCorreo({
+      to: destino,
+      subject: `Nueva solicitud de titulación — ${payload.radicado ?? ''} (${nombres} ${apellidos})`,
+      adjunto,
+      html: `
+        <p>Se radicó una nueva solicitud de titulación:</p>
+        <table cellpadding="4" style="border-collapse:collapse;">
+          <tr><td><b>Radicado</b></td><td>${radicado}</td></tr>
+          <tr><td><b>Estudiante</b></td><td>${nombres} ${apellidos}</td></tr>
+          <tr><td><b>Correo del estudiante</b></td><td>${escapeHtml(correoEstudiante)}</td></tr>
+          <tr><td><b>Programa</b></td><td>${programa}</td></tr>
+          <tr><td><b>Nivel</b></td><td>${nivel}</td></tr>
+          <tr><td><b>Vía de radicación</b></td><td>${viaRadicacion}</td></tr>
+        </table>
+        <p>Puede consultar el expediente completo desde el panel administrativo del portal.</p>
+        <p style="color:#888;font-size:12px;">Este es un mensaje generado automáticamente por el Sistema
+        de Solicitud de Titulación — Escuela Naval de Cadetes "Almirante Padilla".</p>
+      `,
+    });
+  } catch (error) {
+    console.error('[Titulación] No se pudo notificar a Secretaría Académica:', error);
+  }
+}
+
 async function notificarRadicacion(payload) {
   const correo = String(payload.correo || '').trim();
   if (!correo) {
@@ -142,6 +189,11 @@ async function notificarRadicacion(payload) {
       de Solicitud de Titulación — Escuela Naval de Cadetes "Almirante Padilla".</p>
     `,
   });
+
+  // Aviso a Secretaría Académica -- independiente del correo de arriba: si
+  // este falla, no debe borrar ni oscurecer que la confirmación al
+  // estudiante sí salió.
+  await notificarSecretaria(payload, correo);
 }
 
 function setCors(res) {

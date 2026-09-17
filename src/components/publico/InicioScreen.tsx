@@ -22,7 +22,7 @@ interface Props {
   /** null = la ventana general de radicación sigue abierta. */
   avisoCierre?: string | null;
   /** Resultado de vigenciaCeremonia() — controla la opción "por ceremonia". */
-  ceremonia: { vigente: boolean; motivo: 'sin-fecha-tentativa' | 'antes-de-apertura' | 'despues-de-cierre' | null };
+  ceremonia: { vigente: boolean; motivo: 'sin-ceremonia-vigente' | 'despues-de-cierre' | null };
 }
 
 export function formatearFechaLarga(iso: string): string {

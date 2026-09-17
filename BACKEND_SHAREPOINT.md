@@ -18,6 +18,40 @@ ningún permiso ni lista adicional: reutiliza el mismo permiso
 `Sites.ReadWrite.All` del punto 1 y la lista `ENAP_Ceremonias` que el
 Portal ya usa.
 
+**Regla de vigencia, ahora exacta y sin pasos manuales:** el Portal define
+cada ceremonia con exactamente 3 fechas (Nombre y Observaciones aparte):
+Fecha de la ceremonia, Fecha límite de solicitud del estudiante, y Fecha
+límite de validación de facultades (documentos + aval del decano). La
+ceremonia aparece ACTIVA para el estudiante si y solo si HOY es menor o
+igual a la "Fecha límite de solicitud del estudiante" — en cuanto esa
+fecha pasa, se bloquea sola. El campo "Estado" del Portal (Borrador/Activa/
+Cerrada) ya no decide esto, queda solo informativo. Si la lista
+`ENAP_Ceremonias` todavía no tiene una columna para "Fecha límite de
+solicitud del estudiante", agréguela (columna de fecha, cualquier nombre
+reconocible como "FechaLimiteSolicitudEstudiante" o "Fecha límite de
+solicitud del estudiante" — se resuelve dinámicamente igual que las demás).
+
+**Aviso automático a Secretaría Académica:** cada solicitud radicada ahora
+también notifica por correo a Secretaría Académica, además de la
+confirmación que ya recibía el estudiante — sin importar desde qué
+computador, red o ciudad se haya radicado, porque el envío lo hace el
+servidor, no el navegador del estudiante. Por defecto se envía a
+`sac@enap.edu.co`; si esa dirección cambia, se puede fijar otra con la
+variable de entorno opcional `GRAPH_SAC_NOTIFICACION_EMAIL` en Vercel, sin
+tocar código. Un fallo en este aviso nunca bloquea la radicación ni la
+confirmación al estudiante — solo queda registrado en los logs de la
+función.
+
+**Inicio de sesión de Secretaría Académica corregido:** el correo de
+fábrica con el que el sistema reconocía a Secretaría Académica estaba mal
+— decía `secretariaacademica`, que no es el correo real de nadie, así que
+intentar entrar como `sac@enap.edu.co` siempre se rechazaba como "no
+autorizado" (no era una sesión atascada ni caché del navegador: el botón
+de cerrar sesión ya funcionaba correctamente). Ya quedó corregido a `sac`
+(es decir, `sac@enap.edu.co`), con una migración automática para que los
+navegadores que ya habían cargado esta app antes también se corrijan
+solos, sin tener que borrar caché ni datos de sitio a mano.
+
 **Importante:** este código no se pudo probar contra el tenant real de
 Microsoft 365 (no hay credenciales disponibles en este entorno de
 desarrollo). Antes de confiar en él con solicitudes de estudiantes reales,
