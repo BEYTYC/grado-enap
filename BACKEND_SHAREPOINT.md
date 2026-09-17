@@ -58,6 +58,56 @@ desarrollo). Antes de confiar en él con solicitudes de estudiantes reales,
 hay que hacer una prueba de extremo a extremo ya en producción (ver el
 punto 3 al final de este documento).
 
+## 0. Si sale el error "No se encontró la lista... las listas que SÍ existen son: Documentos"
+
+Esto NO es un error de permisos ni de nombre de columna: significa que
+Microsoft Graph, al resolver `https://escuelanaval.sharepoint.com` por su
+nombre de host, encontró un sitio de SharePoint distinto al que se ve en el
+navegador al entrar a esa misma URL — un sitio casi vacío, con solo la
+biblioteca "Documentos" por defecto. Es un comportamiento real y documentado
+de Microsoft 365 (no un error nuestro de código): cuando un tenant tiene
+configurado un **"Home Site"** (sitio de inicio) en el centro de
+administración de SharePoint, el navegador redirige la URL raíz hacia ese
+sitio de inicio, pero Graph, al pedir `/sites/{hostname}`, puede seguir
+devolviendo el sitio raíz ORIGINAL (el que existía antes de configurar el
+Home Site), que es un sitio diferente aunque comparta el mismo hostname.
+También puede pasar si la lista vive en un sitio de equipo/grupo de
+Microsoft 365 en vez de en el sitio raíz mismo. Cambiar la sintaxis de la
+consulta (por ejemplo pedir `/sites/root/lists/ENAP_Ceremonias` en vez de
+buscar por nombre) NO arregla esto, porque `/sites/root` y
+`/sites/{hostname}` resuelven exactamente al MISMO sitio raíz — el
+problema no es cómo se pregunta, es que ese sitio raíz no es el sitio
+correcto.
+
+El código ya intenta dos cosas automáticamente antes de rendirse: (1)
+busca entre todos los sitios visibles para la aplicación
+(`/sites?search=*`), y (2) revisa el sitio raíz de cada grupo de Microsoft
+365 del tenant (`/groups/{id}/sites/root`), por si la lista vive en un
+sitio de equipo. Si aun así no la encuentra, la forma 100% confiable de
+resolverlo es indicarle el sitio exacto, sin que el código tenga que
+adivinar nada:
+
+1. Con la sesión iniciada en el navegador donde SÍ se ve la lista, abrir
+   esta URL (reemplazando el hostname si es distinto):
+   `https://escuelanaval.sharepoint.com/_api/site/id`
+   Esto devuelve un XML con un GUID entre `<d:Id>...</d:Id>` — cópielo.
+2. Abrir también:
+   `https://escuelanaval.sharepoint.com/_api/web/id`
+   Copie ese otro GUID.
+3. En Vercel (proyecto `grado-enap`) → Settings → Environment Variables,
+   agregar una nueva variable:
+   - Nombre: `GRAPH_SITE_ID`
+   - Valor: `escuelanaval.sharepoint.com,GUID_DEL_PASO_1,GUID_DEL_PASO_2`
+     (los tres valores separados por comas, sin espacios)
+4. Redeploy. Con `GRAPH_SITE_ID` configurada, el código deja de adivinar
+   por completo y usa siempre ese sitio exacto.
+
+(Si en vez del sitio raíz la lista vive bajo una ruta como
+`/sites/NombreDelSitio`, también se puede usar `GRAPH_SITE_PATH` con el
+valor `sites/NombreDelSitio` en lugar de `GRAPH_SITE_ID` — pero el método
+de los dos GUID de arriba es el más directo y funciona siempre, sin
+importar dónde viva el sitio.)
+
 ## 1. Variable de entorno / permiso de Microsoft Graph
 
 En Vercel, este proyecto ya debería tener configuradas estas variables (las
@@ -67,6 +117,8 @@ reutilizar el mismo App Registration de Entra ID / Azure AD):
 - `GRAPH_TENANT_ID`
 - `GRAPH_CLIENT_ID`
 - `GRAPH_CLIENT_SECRET`
+- `GRAPH_SITE_ID` (opcional pero recomendada — ver sección 0 de arriba si
+  sigue el error de "lista no encontrada")
 - `GRAPH_MAIL_FROM` (solo la usan las funciones de correo)
 - `API_KEY` (opcional, cabecera `x-api-key`, igual que las de correo)
 
