@@ -136,7 +136,7 @@ export function PasoDocumentos({ requeridos, documentos, onArchivo, onContinuar,
     requeridos.length > 0 && requeridos.every((doc) => documentos.some((d) => d.id === doc.id && d.estado === 'cargado'));
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5">
+    <div className="mx-auto w-full max-w-4xl space-y-5">
       <header className="text-center">
         <h2 className="text-xl font-semibold text-navy-900">Tus documentos</h2>
         <p className="mt-1 text-sm text-slate-500">Cargue cada documento en formato PDF. Todos son obligatorios para continuar.</p>

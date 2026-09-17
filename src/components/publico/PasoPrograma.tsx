@@ -51,7 +51,7 @@ export function PasoPrograma({
   }, [esDiplomado]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5">
+    <div className="mx-auto w-full max-w-4xl space-y-5">
       <header className="text-center">
         <h2 className="text-xl font-semibold text-navy-900">Tu programa</h2>
         <p className="mt-1 text-sm text-slate-500">Seleccione el programa que está cursando o del que se va a titular.</p>

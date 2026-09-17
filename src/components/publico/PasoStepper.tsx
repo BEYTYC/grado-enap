@@ -7,7 +7,7 @@ const NOMBRES_PASO = ['Tus datos', 'Tu programa', 'Tus documentos', 'Resumen y a
 
 export function PasoStepper({ paso }: { paso: 1 | 2 | 3 | 4 }) {
   return (
-    <ol className="mx-auto flex w-full max-w-2xl items-center justify-between gap-2">
+    <ol className="mx-auto flex w-full max-w-4xl items-center justify-between gap-2">
       {NOMBRES_PASO.map((nombre, index) => {
         const numero = index + 1;
         const activo = numero === paso;

@@ -51,7 +51,7 @@ export function PasoResumen({
   onVolver,
 }: Props) {
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5">
+    <div className="mx-auto w-full max-w-4xl space-y-5">
       <header className="text-center">
         <h2 className="text-xl font-semibold text-navy-900">Resumen y autorización</h2>
         <p className="mt-1 text-sm text-slate-500">Revise que todo esté correcto antes de radicar.</p>
@@ -59,7 +59,7 @@ export function PasoResumen({
 
       <section className="card p-5">
         <h3 className="mb-3 text-sm font-semibold text-navy-900">Sus datos</h3>
-        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-x-8 gap-y-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <Dato label="Nombres" value={datosPersonales.nombres} />
           <Dato label="Apellidos" value={datosPersonales.apellidos} />
           <Dato label="Tipo de documento" value={datosPersonales.tipoDocumento} />
@@ -89,7 +89,8 @@ export function PasoResumen({
       </section>
 
       <section className="card space-y-3 p-5">
-        <label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700">
+        <h3 className="text-sm font-semibold text-navy-900">Autorización de tratamiento de datos</h3>
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
           <input
             type="checkbox"
             className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-navy-700 focus:ring-navy-500"
@@ -98,6 +99,10 @@ export function PasoResumen({
           />
           <span>{TEXTO_AUTORIZACION_DATOS}</span>
         </label>
+        <p className="text-xs text-slate-500">
+          Al radicar, se genera automáticamente un PDF con este texto y sus datos, y se le envía adjunto
+          a su correo junto con la confirmación de radicado.
+        </p>
       </section>
 
       {error && (
