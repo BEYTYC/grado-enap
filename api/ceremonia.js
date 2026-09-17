@@ -51,7 +51,10 @@ const CANDIDATOS_COLUMNAS = {
   nombre: ['Title', 'Nombre', 'Nombre de la ceremonia'],
   fechaCeremonia: ['FechaCeremonia', 'Fecha de la ceremonia', 'Fecha_ceremonia'],
   fechaLimiteSolicitudEstudiante: [
+    'FechaLimiteSolicitud',
     'FechaLimiteSolicitudEstudiante',
+    'FechaLimiteEstudiante',
+    'Fecha limite de solicitud',
     'Fecha limite de solicitud del estudiante',
     'Fecha limite solicitud estudiante',
   ],
