@@ -9,6 +9,15 @@ Esto corrige el problema original: antes, una solicitud radicada en un
 computador de biblioteca solo era visible desde ESE navegador. Ahora todo
 queda en SharePoint, visible desde cualquier equipo.
 
+Además, ahora la vía "Ceremonia" del formulario del estudiante (`api/
+ceremonia.js`) lee la MISMA lista `ENAP_Ceremonias` donde el Portal
+principal crea las ceremonias, en vez de una fecha manual que se guardaba
+aparte y que nunca reflejaba lo que el Portal registraba — por eso antes
+una ceremonia marcada "Activa" en el Portal no se veía aquí. No necesita
+ningún permiso ni lista adicional: reutiliza el mismo permiso
+`Sites.ReadWrite.All` del punto 1 y la lista `ENAP_Ceremonias` que el
+Portal ya usa.
+
 **Importante:** este código no se pudo probar contra el tenant real de
 Microsoft 365 (no hay credenciales disponibles en este entorno de
 desarrollo). Antes de confiar en él con solicitudes de estudiantes reales,

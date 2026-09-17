@@ -22,6 +22,7 @@ import { LoginScreenAdmin } from './components/admin/LoginScreenAdmin';
 import { PanelAdmin } from './components/admin/PanelAdmin';
 import { PanelPermisos } from './components/admin/PanelPermisos';
 import { cargarConfig } from './services/configService';
+import { obtenerCeremoniaActiva } from './services/ceremoniaService';
 import { solicitudesAbiertas, vigenciaCeremonia } from './services/reglasNegocio';
 import type { ConfiguracionTitulacion } from './types';
 import { useAuthAdmin } from './hooks/useAuthAdmin';
@@ -172,13 +173,32 @@ export default function App() {
   });
 
   // Vigencia de la vía "Ceremonia" (requerimiento 3.1 del Portal): solo
-  // habilitada cuando Secretaría Académica definió una fecha tentativa de
-  // ceremonia Y la ventana general de radicación sigue abierta — ver
-  // vigenciaCeremonia() en reglasNegocio.ts.
-  const [ceremonia] = useState<ReturnType<typeof vigenciaCeremonia>>(() => {
-    if (embedded) return { vigente: false, motivo: 'sin-fecha-tentativa' };
-    return vigenciaCeremonia(cargarConfig());
+  // habilitada cuando HAY UNA CEREMONIA REAL marcada "Activa" en el Portal
+  // (lista de SharePoint ENAP_Ceremonias — ver ceremoniaService.ts) Y la
+  // ventana general de radicación sigue abierta — ver vigenciaCeremonia()
+  // en reglasNegocio.ts. Se consulta al abrir la página; mientras responde,
+  // se asume "no vigente" (igual que si no hubiera ceremonia) en vez de
+  // dejar el botón en un estado intermedio.
+  const [ceremonia, setCeremonia] = useState<ReturnType<typeof vigenciaCeremonia>>({
+    vigente: false,
+    motivo: 'sin-fecha-tentativa',
   });
+  useEffect(() => {
+    if (embedded) return;
+    let cancelado = false;
+    obtenerCeremoniaActiva().then((activa) => {
+      if (cancelado) return;
+      setCeremonia(
+        vigenciaCeremonia({
+          ...cargarConfig(),
+          fechaTentativaGrado: activa?.fechaCeremonia ?? null,
+        }),
+      );
+    });
+    return () => {
+      cancelado = true;
+    };
+  }, [embedded]);
 
   // Incrustada, esta app no pinta su propio fondo: el Portal ya pone su
   // marca de agua detrás — el mismo patrón que usa Registro.
